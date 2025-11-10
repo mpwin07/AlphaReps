@@ -1,0 +1,155 @@
+@import url('https://fonts.googleapis.com/css2?family=Montserrat:wght@600;700;800;900&family=Inter:wght@300;400;500;600;700&display=swap');
+
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@layer base {
+  body {
+    @apply bg-dark-900 text-gray-100 font-body;
+  }
+  
+  h1, h2, h3, h4, h5, h6 {
+    @apply font-display font-bold;
+  }
+}
+
+@layer components {
+  .btn-primary {
+    @apply bg-gradient-to-r from-primary-500 to-primary-600 hover:from-primary-600 hover:to-primary-700 text-white font-bold py-3 px-6 rounded-lg shadow-lg transform transition-all duration-200 hover:scale-105 active:scale-95;
+  }
+  
+  .btn-secondary {
+    @apply bg-gradient-to-r from-accent-500 to-accent-600 hover:from-accent-600 hover:to-accent-700 text-white font-bold py-3 px-6 rounded-lg shadow-lg transform transition-all duration-200 hover:scale-105 active:scale-95;
+  }
+  
+  .btn-outline {
+    @apply border-2 border-primary-500 text-primary-500 hover:bg-primary-500 hover:text-white font-bold py-3 px-6 rounded-lg transform transition-all duration-200 hover:scale-105;
+  }
+  
+  .card {
+    @apply bg-dark-800 rounded-xl shadow-2xl p-6 border border-dark-700 backdrop-blur-sm;
+  }
+  
+  .card-hover {
+    @apply card transform transition-all duration-300 hover:scale-105 hover:shadow-primary-500/20 hover:shadow-2xl cursor-pointer;
+  }
+  
+  .stat-box {
+    @apply bg-gradient-to-br from-primary-500/10 to-accent-500/10 border border-primary-500/20 rounded-lg p-4 backdrop-blur-sm;
+  }
+  
+  .input-field {
+    @apply bg-dark-700 border-2 border-dark-600 focus:border-primary-500 focus:ring-2 focus:ring-primary-500/20 rounded-lg px-4 py-3 text-gray-100 placeholder-gray-400 transition-all duration-200;
+  }
+  
+  .badge {
+    @apply inline-flex items-center px-3 py-1 rounded-full text-xs font-bold uppercase tracking-wide;
+  }
+  
+  .badge-success {
+    @apply badge bg-accent-500/20 text-accent-400 border border-accent-500/30;
+  }
+  
+  .badge-warning {
+    @apply badge bg-warning-500/20 text-warning-400 border border-warning-500/30;
+  }
+  
+  .badge-error {
+    @apply badge bg-primary-500/20 text-primary-400 border border-primary-500/30;
+  }
+  
+  .gradient-text {
+    @apply bg-gradient-to-r from-primary-400 via-accent-400 to-primary-400 bg-clip-text text-transparent animate-gradient;
+  }
+  
+  .glow-effect {
+    @apply shadow-lg shadow-primary-500/50;
+  }
+  
+  .workout-card {
+    @apply relative overflow-hidden bg-gradient-to-br from-dark-800 to-dark-900 rounded-2xl p-6 border-2 border-primary-500/20 hover:border-primary-500/50 transition-all duration-300;
+  }
+  
+  .workout-card::before {
+    content: '';
+    @apply absolute inset-0 bg-gradient-to-r from-primary-500/0 via-primary-500/10 to-primary-500/0 translate-x-[-200%] transition-transform duration-700;
+  }
+  
+  .workout-card:hover::before {
+    @apply translate-x-[200%];
+  }
+}
+
+@layer utilities {
+  .text-shadow {
+    text-shadow: 0 2px 4px rgba(0,0,0,0.5);
+  }
+  
+  .text-glow {
+    text-shadow: 0 0 20px rgba(255, 59, 59, 0.5);
+  }
+  
+  .scrollbar-hide::-webkit-scrollbar {
+    display: none;
+  }
+  
+  .scrollbar-hide {
+    -ms-overflow-style: none;
+    scrollbar-width: none;
+  }
+}
+
+/* Custom Animations */
+@keyframes pulse-ring {
+  0% {
+    transform: scale(0.33);
+  }
+  80%, 100% {
+    opacity: 0;
+  }
+}
+
+.pulse-ring {
+  animation: pulse-ring 1.25s cubic-bezier(0.215, 0.61, 0.355, 1) infinite;
+}
+
+/* Loading Spinner */
+.spinner {
+  border: 3px solid rgba(255, 59, 59, 0.1);
+  border-radius: 50%;
+  border-top-color: #ff3b3b;
+  width: 40px;
+  height: 40px;
+  animation: spin 1s ease-in-out infinite;
+}
+
+@keyframes spin {
+  to { transform: rotate(360deg); }
+}
+
+/* Video Feed Styles */
+.video-container {
+  @apply relative overflow-hidden rounded-2xl shadow-2xl border-4 border-primary-500/30;
+}
+
+.video-overlay {
+  @apply absolute inset-0 bg-gradient-to-t from-dark-900/80 via-transparent to-transparent pointer-events-none;
+}
+
+/* Rep Counter Animation */
+@keyframes count-up {
+  0% {
+    transform: scale(1);
+  }
+  50% {
+    transform: scale(1.5);
+  }
+  100% {
+    transform: scale(1);
+  }
+}
+
+.rep-count-animate {
+  animation: count-up 0.3s ease-in-out;
+}

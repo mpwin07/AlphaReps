@@ -60,11 +60,15 @@
   }
   
   .gradient-text {
-    @apply bg-gradient-to-r from-primary-400 via-accent-400 to-primary-400 bg-clip-text text-transparent animate-gradient;
+    @apply bg-gradient-to-r from-primary-500 via-accent-500 to-primary-500 bg-clip-text text-transparent animate-gradient;
   }
   
   .glow-effect {
     @apply shadow-lg shadow-primary-500/50;
+  }
+  
+  .glow-lime {
+    @apply shadow-lg shadow-accent-500/50;
   }
   
   .workout-card {
@@ -87,7 +91,11 @@
   }
   
   .text-glow {
-    text-shadow: 0 0 20px rgba(255, 59, 59, 0.5);
+    text-shadow: 0 0 20px rgba(24, 144, 255, 0.5);
+  }
+  
+  .text-glow-lime {
+    text-shadow: 0 0 20px rgba(82, 196, 26, 0.5);
   }
   
   .scrollbar-hide::-webkit-scrollbar {
@@ -116,9 +124,9 @@
 
 /* Loading Spinner */
 .spinner {
-  border: 3px solid rgba(255, 59, 59, 0.1);
+  border: 3px solid rgba(24, 144, 255, 0.1);
   border-radius: 50%;
-  border-top-color: #ff3b3b;
+  border-top-color: #1890ff;
   width: 40px;
   height: 40px;
   animation: spin 1s ease-in-out infinite;

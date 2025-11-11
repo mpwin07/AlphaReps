@@ -34,7 +34,7 @@ Built for **gyms**, **trainers**, and **fitness enthusiasts** who want AI-powere
 ### 🤖 AI-Powered Exercise Detection
 - **Real-time pose detection** using MediaPipe with GPU acceleration
 - **5 exercise types supported**: Push-ups, Squats, Bicep Curls, Hammer Curls, Shoulder Press
-- **95%+ accuracy** with premium ensemble model (RF + ET + GB + Ada + SVM + XGBoost)
+- **95%+ accuracy** with premium ensemble model (RF + GB + SVC)
 - **Automatic classification** - Just start exercising!
 
 ### 📊 Smart Form Analysis
@@ -140,17 +140,26 @@ git clone https://github.com/mpwin07/KPR_Hackathon.git
 cd AlphaReps
 ```
 
-### 2️⃣ Backend Setup
+### 2️⃣ Install Dependencies
+
+**Install Root Dependencies (for concurrent running):**
+```bash
+npm install
+```
 
 **Install Python Dependencies:**
 ```bash
 pip install -r requirements.txt
 ```
 
-**Install XGBoost (for 95%+ accuracy):**
+**Install Frontend Dependencies:**
 ```bash
-pip install xgboost
+cd frontend
+npm install
+cd ..
 ```
+
+### 3️⃣ Train the AI Model
 
 **Prepare Dataset:**
 Place exercise videos in `backend/dataset/`:
@@ -163,66 +172,60 @@ backend/dataset/
 └── squat/                (10+ .mp4 videos)
 ```
 
-**Train the Premium Model:**
+**Train the Model:**
 ```bash
 cd backend/scripts
-python retrain_improved_model.py
+python train_video_model.py
 ```
 
 This will:
 - Process all videos (30 frames each)
-- Extract 170 features per frame
-- Apply 5x data augmentation
-- Train 6-model ensemble (RF + ET + GB + Ada + SVM + XGBoost)
-- Achieve **93-96% accuracy** (CPU) or **95-97%** (GPU)
-- Takes 8-25 minutes depending on hardware
+- Extract 146 features per frame
+- Train ensemble model (RF + GB + SVM)
+- Achieve **95%+ accuracy**
+- Takes 5-15 minutes depending on hardware
 
-**Test the Model:**
-```bash
-cd backend
-python start_workout.py
-```
+### 4️⃣ Run the Application
 
-Or use the unified system directly:
-```bash
-cd backend
-python unified_workout_system.py
-```
-
-Or use the integrated trainer:
-```bash
-cd backend
-python integrated_trainer.py
-```
-
-### 3️⃣ Frontend Setup
-
-**Install Dependencies:**
-```bash
-cd frontend
-npm install
-```
-
-**Download Face Recognition Models:**
-
-Create `frontend/public/models/` and download from:
-https://github.com/justadudewhohacks/face-api.js-models
-
-Or use the quick download script in `frontend/SETUP.md`
-
-**Start Development Server:**
+**🚀 Single Command (Recommended):**
 ```bash
 npm run dev
 ```
 
-Frontend runs on: **http://localhost:3000**
+This will start both:
+- **Backend** (FastAPI) on http://localhost:8000
+- **Frontend** (React) on http://localhost:3000
 
-### 4️⃣ Access the App
+**Or run separately:**
+
+Backend:
+```bash
+npm run dev:backend
+# or
+cd backend
+python -m uvicorn main:app --reload
+```
+
+Frontend:
+```bash
+npm run dev:frontend
+# or
+cd frontend
+npm run dev
+```
+
+### 5️⃣ Access the App
 
 1. **Open**: http://localhost:3000
-2. **Register**: Enter name and capture face
-3. **Login**: Face recognition auto-login
-4. **Start Workout**: Click "Start Workout" and begin!
+2. **Login**: Enter your name (e.g., "John Doe")
+3. **Select Role**: User or Admin
+4. **Start Workout**: Click "Start Workout" and begin exercising!
+
+The app will automatically:
+- Detect your exercise type
+- Count your reps
+- Provide real-time form feedback
+- Lock exercise classification after 10 reps
 
 ---
 

@@ -25,6 +25,7 @@ const WorkoutSession = () => {
   const [angles, setAngles] = useState({ elbow: 0, back: 0 })
 
   const intervalRef = useRef(null)
+  const isProcessingRef = useRef(false)
 
   useEffect(() => {
     if (isActive) {
@@ -37,15 +38,18 @@ const WorkoutSession = () => {
   }, [isActive])
 
   const startWorkout = () => {
-    // Send video frames to backend every 100ms
+    // Send video frames to backend every 200ms (reduced from 100ms for better performance)
     intervalRef.current = setInterval(async () => {
+      // Skip if previous request is still processing
+      if (isProcessingRef.current) return
+      
       if (webcamRef.current) {
         const imageSrc = webcamRef.current.getScreenshot()
         if (imageSrc) {
           await sendFrame(imageSrc)
         }
       }
-    }, 100)
+    }, 200)
   }
 
   const stopWorkout = () => {
@@ -55,9 +59,16 @@ const WorkoutSession = () => {
   }
 
   const sendFrame = async (imageData) => {
+    // Prevent overlapping requests
+    if (isProcessingRef.current) return
+    
+    isProcessingRef.current = true
+    
     try {
       const response = await axios.post('/api/workout/analyze', {
         frame: imageData
+      }, {
+        timeout: 5000 // 5 second timeout
       })
 
       const data = response.data
@@ -83,6 +94,8 @@ const WorkoutSession = () => {
 
     } catch (error) {
       console.error('Error analyzing frame:', error)
+    } finally {
+      isProcessingRef.current = false
     }
   }
 

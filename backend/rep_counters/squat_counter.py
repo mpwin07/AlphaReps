@@ -9,10 +9,10 @@ class SquatCounter(BaseRepCounter):
     def __init__(self):
         super().__init__()
         self.angle_history = []
-        self.history_size = 5
-        self.min_down_angle = 90  # Must go below 90 degrees
-        self.min_up_angle = 160   # Must go above 160 degrees
-        self.debounce_frames = 3
+        self.history_size = 5  # Balanced smoothing
+        self.min_down_angle = 90  # More lenient - must go below 90 degrees
+        self.min_up_angle = 160   # More lenient - must go above 160 degrees
+        self.debounce_frames = 2  # Reduced for faster response
         self.frames_in_position = 0
         
     def count_rep(self, landmarks):
@@ -46,22 +46,13 @@ class SquatCounter(BaseRepCounter):
             
             # Rep counting logic with debouncing
             if smoothed_angle > self.min_up_angle:
-                if self.stage != "up":
-                    self.frames_in_position += 1
-                    if self.frames_in_position >= self.debounce_frames:
-                        self.stage = "up"
-                        self.frames_in_position = 0
-                else:
-                    self.frames_in_position = 0
+                self.stage = "up"
+                self.frames_in_position = 0
                     
-            elif smoothed_angle < self.min_down_angle and self.stage == "up":
-                if self.stage != "down":
-                    self.frames_in_position += 1
-                    if self.frames_in_position >= self.debounce_frames:
-                        self.stage = "down"
-                        self.counter += 1
-                        self.frames_in_position = 0
-                else:
+            elif smoothed_angle < self.min_down_angle:
+                if self.stage == "up":
+                    self.stage = "down"
+                    self.counter += 1
                     self.frames_in_position = 0
             
             return self.counter, self.stage, int(smoothed_angle)

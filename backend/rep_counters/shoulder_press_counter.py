@@ -10,9 +10,9 @@ class ShoulderPressCounter(BaseRepCounter):
         super().__init__()
         self.angle_history = []
         self.history_size = 5
-        self.min_down_angle = 70   # Must go below 70 degrees
-        self.min_up_angle = 150    # Must extend above 150 degrees
-        self.debounce_frames = 3
+        self.min_down_angle = 90   # Must go below 90 degrees (more lenient)
+        self.min_up_angle = 140    # Must extend above 140 degrees (more lenient)
+        self.debounce_frames = 2   # Reduced for faster response
         self.frames_in_position = 0
         
     def count_rep(self, landmarks):
@@ -46,22 +46,13 @@ class ShoulderPressCounter(BaseRepCounter):
             
             # Rep counting logic with debouncing
             if smoothed_angle < self.min_down_angle:
-                if self.stage != "down":
-                    self.frames_in_position += 1
-                    if self.frames_in_position >= self.debounce_frames:
-                        self.stage = "down"
-                        self.frames_in_position = 0
-                else:
-                    self.frames_in_position = 0
+                self.stage = "down"
+                self.frames_in_position = 0
                     
-            elif smoothed_angle > self.min_up_angle and self.stage == "down":
-                if self.stage != "up":
-                    self.frames_in_position += 1
-                    if self.frames_in_position >= self.debounce_frames:
-                        self.stage = "up"
-                        self.counter += 1
-                        self.frames_in_position = 0
-                else:
+            elif smoothed_angle > self.min_up_angle:
+                if self.stage == "down":
+                    self.stage = "up"
+                    self.counter += 1
                     self.frames_in_position = 0
             
             return self.counter, self.stage, int(smoothed_angle)

@@ -14,6 +14,10 @@ class PushupCounter(BaseRepCounter):
         self.avg_back_angle = 0
         self.avg_elbow_angle = 0
         self.form_quality = "GOOD"
+        # Smoothing for better accuracy
+        self.back_angle_history = []
+        self.elbow_angle_history = []
+        self.history_size = 5
         
     def check_posture(self, landmarks):
         """
@@ -68,38 +72,61 @@ class PushupCounter(BaseRepCounter):
             # Calculate average elbow angle (arms)
             left_elbow_angle = self.calculate_angle(l_shoulder, l_elbow, l_wrist)
             right_elbow_angle = self.calculate_angle(r_shoulder, r_elbow, r_wrist)
-            self.avg_elbow_angle = (left_elbow_angle + right_elbow_angle) / 2
+            current_elbow_angle = (left_elbow_angle + right_elbow_angle) / 2
             
             # Calculate average back angle (posture)
             left_back_angle = self.calculate_angle(l_shoulder, l_hip, l_ankle)
             right_back_angle = self.calculate_angle(r_shoulder, r_hip, r_ankle)
-            self.avg_back_angle = (left_back_angle + right_back_angle) / 2
+            current_back_angle = (left_back_angle + right_back_angle) / 2
+            
+            # Smooth angles using moving average for better accuracy
+            self.elbow_angle_history.append(current_elbow_angle)
+            if len(self.elbow_angle_history) > self.history_size:
+                self.elbow_angle_history.pop(0)
+            self.avg_elbow_angle = sum(self.elbow_angle_history) / len(self.elbow_angle_history)
+            
+            self.back_angle_history.append(current_back_angle)
+            if len(self.back_angle_history) > self.history_size:
+                self.back_angle_history.pop(0)
+            self.avg_back_angle = sum(self.back_angle_history) / len(self.back_angle_history)
             
             # Check elbow flare (elbows should be tucked)
             left_elbow_flare = self.calculate_angle(l_hip, l_shoulder, l_elbow)
             right_elbow_flare = self.calculate_angle(r_hip, r_shoulder, r_elbow)
             
-            # Posture feedback
+            # Posture feedback with stricter thresholds
             feedback_issues = []
             
-            # 1. Check back alignment (should be straight: 145-180 degrees)
-            if self.avg_back_angle < 145:
-                feedback_issues.append("STRAIGHTEN BACK")
+            # 1. Check back alignment (should be straight: 150-180 degrees for better form)
+            if self.avg_back_angle < 150:
+                if self.avg_back_angle < 140:
+                    feedback_issues.append("STRAIGHTEN BACK - HIPS SAGGING")
+                else:
+                    feedback_issues.append("STRAIGHTEN BACK")
             
-            # 2. Check elbow flare (should be < 65 degrees for proper form)
-            if left_elbow_flare > 65 or right_elbow_flare > 65:
-                feedback_issues.append("TUCK ELBOWS")
+            # 2. Check elbow flare (should be < 60 degrees for proper form - stricter)
+            avg_elbow_flare = (left_elbow_flare + right_elbow_flare) / 2
+            if avg_elbow_flare > 60:
+                if avg_elbow_flare > 70:
+                    feedback_issues.append("TUCK ELBOWS IN MORE")
+                else:
+                    feedback_issues.append("TUCK ELBOWS")
             
-            # 3. Check if hips are sagging
-            if self.avg_back_angle < 135:
-                feedback_issues.append("HIPS TOO LOW")
+            # 3. Check if hips are too high (pike position)
+            if self.avg_back_angle > 175:
+                feedback_issues.append("LOWER HIPS")
+            
+            # 4. Check elbow symmetry
+            elbow_diff = abs(left_elbow_angle - right_elbow_angle)
+            if elbow_diff > 15:
+                feedback_issues.append("BALANCE BOTH ARMS")
             
             # Provide feedback
             if len(feedback_issues) > 0:
-                form_feedback = " | ".join(feedback_issues)
+                form_feedback = " | ".join(feedback_issues[:2])  # Show max 2 issues
                 self.form_quality = "POOR"
             else:
-                form_feedback = "GOOD FORM"
+                form_feedback = "PERFECT FORM"
                 self.form_quality = "GOOD"
             
             return form_feedback, self.avg_back_angle, len(feedback_issues) > 0
@@ -131,8 +158,8 @@ class PushupCounter(BaseRepCounter):
             
             # State machine for rep counting with posture awareness
             if self.state == 'get_ready':
-                # Check if in proper starting position
-                if is_body_visible and self.avg_back_angle > 145 and self.avg_elbow_angle > 155:
+                # Check if in proper starting position (stricter requirements)
+                if is_body_visible and self.avg_back_angle > 150 and self.avg_elbow_angle > 160:
                     self.state = 'ready'
                     self.feedback = form_feedback
                     self.stage = "up"
@@ -141,18 +168,18 @@ class PushupCounter(BaseRepCounter):
             
             elif self.state == 'ready' or self.stage == "up":
                 self.feedback = form_feedback
-                # Going down (elbow bending)
-                if self.avg_elbow_angle < 90:
+                # Going down (elbow bending) - must go below 95 degrees
+                if self.avg_elbow_angle < 95:
                     self.stage = "down"
             
             elif self.stage == "down":
                 self.feedback = form_feedback
-                # Going up (elbow extending)
-                if self.avg_elbow_angle > 155:
-                    # Only count rep if form was good
+                # Going up (elbow extending) - must extend above 160 degrees
+                if self.avg_elbow_angle > 160:
+                    # Only count rep if form was good throughout
                     if not has_form_issues:
                         self.counter += 1
-                        self.feedback = "REP COUNTED!"
+                        self.feedback = "✓ REP COUNTED - EXCELLENT!"
                     else:
                         self.feedback = form_feedback + " | REP NOT COUNTED"
                     

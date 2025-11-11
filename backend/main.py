@@ -74,29 +74,34 @@ counters = {
 user_sessions = {}
 current_exercise = None
 current_counter = None
+exercise_locked = False
+exercise_lock_min_reps = 10
+classification_buffer = []
+classification_buffer_size = 5
+min_classification_confidence = 0.7
 
 @app.on_event("startup")
 async def startup_event():
     """Initialize the application on startup"""
     global classifier
     print("="*60)
-    print("  🚀 ALPHAREPS API STARTING")
+    print("  ALPHAREPS API STARTING")
     print("="*60)
     
     # Load exercise classifier
     model_path = "models/video_exercise_model.pkl"
     if os.path.exists(model_path):
-        print("📚 Loading exercise classifier...")
+        print("[*] Loading exercise classifier...")
         classifier = VideoExerciseClassifier()
         classifier.load_model(model_path)
-        print("✅ Model loaded successfully!")
+        print("[+] Model loaded successfully!")
     else:
-        print("⚠️  Model not found. Please train the model first.")
-        print("   Run: python backend/scripts/train_video_model.py")
+        print("[!] Model not found. Please train the model first.")
+        print("    Run: python backend/scripts/train_video_model.py")
         classifier = None
     
-    print("✅ AlphaReps API Ready!")
-    print("📡 Listening on http://localhost:8000")
+    print("[+] AlphaReps API Ready!")
+    print("[*] Listening on http://localhost:8000")
     print("="*60)
 
 @app.get("/")
@@ -196,19 +201,61 @@ async def analyze_frame(data: WorkoutFrame):
                 "angles": {}
             }
         
-        # Classify exercise
+        # Classify exercise with confidence
         detected_exercise = classifier.predict(landmarks)
+        probabilities = classifier.predict_proba(landmarks)
+        exercise_confidence = max(probabilities.values()) if probabilities else 0
         
-        # Switch counter if exercise changed
-        if detected_exercise != current_exercise:
-            current_exercise = detected_exercise
-            current_counter = counters.get(detected_exercise)
-            if current_counter:
-                current_counter.reset()
+        # Add to classification buffer for stability
+        classification_buffer.append(detected_exercise)
+        if len(classification_buffer) > classification_buffer_size:
+            classification_buffer.pop(0)
+        
+        # Get most common exercise from buffer (voting)
+        from collections import Counter
+        if len(classification_buffer) >= 3:
+            vote_counts = Counter(classification_buffer)
+            most_common_exercise = vote_counts.most_common(1)[0][0]
+            vote_confidence = vote_counts.most_common(1)[0][1] / len(classification_buffer)
+        else:
+            most_common_exercise = detected_exercise
+            vote_confidence = 1.0
+        
+        # Exercise locking logic
+        if current_exercise is None:
+            # First detection - set exercise if confidence is high enough
+            if exercise_confidence >= min_classification_confidence and vote_confidence >= 0.6:
+                current_exercise = most_common_exercise
+                current_counter = counters.get(current_exercise)
+                if current_counter:
+                    current_counter.reset()
+                exercise_locked = True
+                print(f"[INFO] Exercise locked: {current_exercise} (confidence: {exercise_confidence:.2f})")
+        elif not exercise_locked:
+            # Not locked yet, can still change
+            if most_common_exercise != current_exercise and exercise_confidence >= min_classification_confidence:
+                current_exercise = most_common_exercise
+                current_counter = counters.get(current_exercise)
+                if current_counter:
+                    current_counter.reset()
+        else:
+            # Locked - check if we can unlock
+            if current_counter and current_counter.get_count() >= exercise_lock_min_reps:
+                # Unlock after minimum reps completed
+                exercise_locked = False
+                # Allow exercise change if new exercise is detected consistently
+                if most_common_exercise != current_exercise and vote_confidence >= 0.8:
+                    current_exercise = most_common_exercise
+                    current_counter = counters.get(current_exercise)
+                    if current_counter:
+                        current_counter.reset()
+                    exercise_locked = True
+                    classification_buffer.clear()
         
         # Count reps
-        if current_counter:
+        if current_counter and current_exercise:
             result = current_counter.count_rep(results.pose_landmarks)
+            print(f"[DEBUG] Exercise: {current_exercise}, Counter result: {result}")
             
             # Parse result based on counter type
             if isinstance(result, tuple):
@@ -232,17 +279,20 @@ async def analyze_frame(data: WorkoutFrame):
                 angles = {}
         else:
             reps, stage = 0, "ready"
-            feedback = f"Detecting {detected_exercise}..."
+            feedback = f"Detecting {most_common_exercise.replace('_', ' ').title()}..."
             form_quality = "UNKNOWN"
             angles = {}
         
+        # Use current_exercise if set, otherwise use detected exercise
+        display_exercise = current_exercise if current_exercise else most_common_exercise
+        
         return {
             "success": True,
-            "exercise": detected_exercise.upper().replace('_', ' '),
+            "exercise": display_exercise.upper().replace('_', ' '),
             "reps": reps,
             "stage": stage,
             "feedback": feedback,
-            "confidence": 95,  # Placeholder
+            "confidence": int(exercise_confidence * 100),
             "formQuality": form_quality,
             "angles": angles
         }
@@ -345,6 +395,23 @@ async def get_supported_exercises():
             "shoulder_press"
         ],
         "total_count": 5
+    }
+
+@app.post("/api/workout/reset")
+async def reset_workout():
+    """Reset workout session"""
+    global current_exercise, current_counter, exercise_locked, classification_buffer
+    
+    current_exercise = None
+    current_counter = None
+    exercise_locked = False
+    classification_buffer.clear()
+    
+    print("[INFO] Workout session reset")
+    
+    return {
+        "success": True,
+        "message": "Workout session reset successfully"
     }
 
 if __name__ == "__main__":

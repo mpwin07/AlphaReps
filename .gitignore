@@ -169,7 +169,6 @@ data/
 *.gif
 *.bmp
 *.tiff
-*.svg
 *.ico
 *.webp
 

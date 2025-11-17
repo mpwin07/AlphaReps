@@ -2,7 +2,6 @@ import { motion, useAnimation } from 'framer-motion'
 import { Link } from 'react-router-dom'
 import { Dumbbell, Zap, Brain, TrendingUp, Shield, Users, Activity, Target, Award, Sparkles } from 'lucide-react'
 import { useEffect, useState } from 'react'
-import Logo from '../components/Logo'
 import Navbar from '../components/Navbar'
 
 const Landing = () => {
@@ -62,18 +61,17 @@ const Landing = () => {
     <div className="min-h-screen bg-dark-900 overflow-hidden relative">
       {/* Navbar */}
       <Navbar />
-      
+
       {/* Animated Background Grid */}
       <div className="absolute inset-0 bg-[linear-gradient(to_right,#1890ff0a_1px,transparent_1px),linear-gradient(to_bottom,#1890ff0a_1px,transparent_1px)] bg-[size:4rem_4rem] [mask-image:radial-gradient(ellipse_80%_50%_at_50%_0%,#000_70%,transparent_110%)]" />
-      
+
       {/* Floating Particles */}
       <div className="absolute inset-0 overflow-hidden">
         {[...Array(20)].map((_, i) => (
           <motion.div
             key={i}
-            className={`absolute w-2 h-2 rounded-full ${
-              i % 3 === 0 ? 'bg-primary-500' : i % 3 === 1 ? 'bg-accent-500' : 'bg-primary-300'
-            }`}
+            className={`absolute w-2 h-2 rounded-full ${i % 3 === 0 ? 'bg-primary-500' : i % 3 === 1 ? 'bg-accent-500' : 'bg-primary-300'
+              }`}
             initial={{
               x: Math.random() * window.innerWidth,
               y: Math.random() * window.innerHeight,
@@ -96,7 +94,7 @@ const Landing = () => {
 
       {/* Gradient Orbs */}
       <div className="absolute inset-0">
-        <motion.div 
+        <motion.div
           className="absolute w-[500px] h-[500px] bg-primary-500/20 rounded-full blur-3xl"
           animate={{
             x: [0, 100, 0],
@@ -106,7 +104,7 @@ const Landing = () => {
           transition={{ duration: 8, repeat: Infinity, ease: 'easeInOut' }}
           style={{ top: '10%', left: '10%' }}
         />
-        <motion.div 
+        <motion.div
           className="absolute w-[600px] h-[600px] bg-accent-500/20 rounded-full blur-3xl"
           animate={{
             x: [0, -100, 0],
@@ -116,7 +114,7 @@ const Landing = () => {
           transition={{ duration: 10, repeat: Infinity, ease: 'easeInOut' }}
           style={{ bottom: '10%', right: '10%' }}
         />
-        <motion.div 
+        <motion.div
           className="absolute w-[400px] h-[400px] bg-primary-400/10 rounded-full blur-3xl"
           animate={{
             x: [0, -50, 0],
@@ -129,54 +127,21 @@ const Landing = () => {
       </div>
 
       {/* Hero Section */}
-      <div className="relative z-10 min-h-screen flex items-center justify-center px-4">
+      <div className="relative z-10 min-h-screen flex items-start justify-center px-4 pt-28">
         <div className="max-w-6xl mx-auto text-center">
           <motion.div
             initial={{ opacity: 0, y: 30 }}
             animate={{ opacity: 1, y: 0 }}
             transition={{ duration: 0.8 }}
           >
-            {/* Logo */}
-            <motion.div
-              initial={{ opacity: 0, scale: 0, rotate: -180 }}
-              animate={{ opacity: 1, scale: 1, rotate: 0 }}
-              transition={{ delay: 0.1, type: 'spring', stiffness: 200, damping: 15 }}
-              className="mb-8"
-            >
-              <Logo size="2xl" animated={false} className="mx-auto drop-shadow-2xl" />
-            </motion.div>
-
-            {/* Badge */}
-            <motion.div
-              initial={{ scale: 0, rotate: -180 }}
-              animate={{ scale: 1, rotate: 0 }}
-              transition={{ delay: 0.2, type: 'spring', stiffness: 200, damping: 10 }}
-              className="inline-block mb-6"
-            >
-              <motion.div 
-                className="bg-gradient-to-r from-primary-500 via-accent-500 to-primary-500 p-1 rounded-full"
-                animate={{
-                  backgroundPosition: ['0% 50%', '100% 50%', '0% 50%']
-                }}
-                transition={{ duration: 3, repeat: Infinity, ease: 'linear' }}
-                style={{ backgroundSize: '200% 200%' }}
-              >
-                <div className="bg-dark-900 rounded-full px-8 py-3 flex items-center gap-2">
-                  <Sparkles className="w-4 h-4 text-accent-400 animate-pulse" />
-                  <span className="text-sm font-bold gradient-text tracking-wider">AI-POWERED TRAINING</span>
-                  <Sparkles className="w-4 h-4 text-primary-400 animate-pulse" />
-                </div>
-              </motion.div>
-            </motion.div>
-
             {/* Main Heading */}
-            <motion.h1 
+            <motion.h1
               className="text-7xl md:text-9xl font-display font-black mb-6"
               style={{
                 transform: `perspective(1000px) rotateX(${mousePosition.y * 0.05}deg) rotateY(${mousePosition.x * 0.05}deg)`
               }}
             >
-              <motion.span 
+              <motion.span
                 className="inline-block gradient-text"
                 animate={{
                   backgroundPosition: ['0% 50%', '100% 50%', '0% 50%']
@@ -185,9 +150,9 @@ const Landing = () => {
               >
                 ALPHA
               </motion.span>
-              <motion.span 
+              <motion.span
                 className="inline-block text-white text-shadow"
-                animate={{ 
+                animate={{
                   textShadow: [
                     '0 0 20px rgba(24,144,255,0.5)',
                     '0 0 40px rgba(82,196,26,0.5)',
@@ -200,7 +165,7 @@ const Landing = () => {
               </motion.span>
             </motion.h1>
 
-            <motion.p 
+            <motion.p
               className="text-2xl md:text-3xl text-gray-300 mb-4 font-semibold"
               initial={{ opacity: 0 }}
               animate={{ opacity: 1 }}
@@ -209,7 +174,7 @@ const Landing = () => {
               <span className="text-primary-400">Train Smarter,</span>{' '}
               <span className="text-accent-400">Not Harder</span>
             </motion.p>
-            <motion.p 
+            <motion.p
               className="text-lg text-gray-400 mb-12 max-w-2xl mx-auto"
               initial={{ opacity: 0, y: 20 }}
               animate={{ opacity: 1, y: 0 }}
@@ -219,7 +184,7 @@ const Landing = () => {
             </motion.p>
 
             {/* CTA Buttons */}
-            <motion.div 
+            <motion.div
               className="flex flex-col sm:flex-row gap-4 justify-center mb-16"
               initial={{ opacity: 0, y: 20 }}
               animate={{ opacity: 1, y: 0 }}
@@ -227,7 +192,7 @@ const Landing = () => {
             >
               <Link to="/login">
                 <motion.button
-                  whileHover={{ 
+                  whileHover={{
                     scale: 1.05,
                     boxShadow: '0 0 30px rgba(24,144,255,0.6)'
                   }}
@@ -246,18 +211,6 @@ const Landing = () => {
                   />
                 </motion.button>
               </Link>
-              <motion.button
-                whileHover={{ 
-                  scale: 1.05,
-                  borderColor: 'rgba(82,196,26,1)',
-                  color: 'rgba(82,196,26,1)'
-                }}
-                whileTap={{ scale: 0.95 }}
-                className="btn-outline px-12 py-4 text-lg flex items-center gap-2"
-              >
-                <Activity className="w-5 h-5" />
-                Watch Demo
-              </motion.button>
             </motion.div>
 
             {/* Stats */}
@@ -272,18 +225,17 @@ const Landing = () => {
                   initial={{ opacity: 0, y: 20 }}
                   animate={{ opacity: 1, y: 0 }}
                   transition={{ delay: 0.8 + i * 0.1 }}
-                  whileHover={{ 
+                  whileHover={{
                     scale: 1.05,
-                    boxShadow: i % 2 === 0 
-                      ? '0 0 30px rgba(24,144,255,0.3)' 
+                    boxShadow: i % 2 === 0
+                      ? '0 0 30px rgba(24,144,255,0.3)'
                       : '0 0 30px rgba(82,196,26,0.3)'
                   }}
                   className="stat-box cursor-pointer group"
                 >
-                  <stat.icon className={`w-8 h-8 mx-auto mb-3 ${
-                    i % 2 === 0 ? 'text-primary-400' : 'text-accent-400'
-                  } group-hover:scale-110 transition-transform`} />
-                  <motion.div 
+                  <stat.icon className={`w-8 h-8 mx-auto mb-3 ${i % 2 === 0 ? 'text-primary-400' : 'text-accent-400'
+                    } group-hover:scale-110 transition-transform`} />
+                  <motion.div
                     className="text-3xl md:text-4xl font-black gradient-text mb-2"
                     animate={{ scale: [1, 1.05, 1] }}
                     transition={{ duration: 2, repeat: Infinity, delay: i * 0.2 }}
@@ -303,12 +255,12 @@ const Landing = () => {
                 key={index}
                 initial={{ opacity: 0, y: 50, rotateX: -30 }}
                 animate={{ opacity: 1, y: 0, rotateX: 0 }}
-                transition={{ 
+                transition={{
                   delay: 1 + feature.delay,
                   type: 'spring',
                   stiffness: 100
                 }}
-                whileHover={{ 
+                whileHover={{
                   y: -10,
                   boxShadow: index % 2 === 0
                     ? '0 20px 40px rgba(24,144,255,0.3)'
@@ -324,9 +276,9 @@ const Landing = () => {
                   transition={{ duration: 3, repeat: Infinity, repeatType: 'reverse' }}
                 />
                 <div className="relative z-10">
-                  <motion.div 
+                  <motion.div
                     className={`w-16 h-16 bg-gradient-to-br ${feature.color} rounded-xl flex items-center justify-center mb-4 shadow-lg`}
-                    whileHover={{ 
+                    whileHover={{
                       scale: 1.2,
                       rotate: 360
                     }}
@@ -350,9 +302,9 @@ const Landing = () => {
             transition={{ delay: 1.5 }}
             className="mt-20"
           >
-            <motion.h3 
+            <motion.h3
               className="text-3xl font-bold mb-8 gradient-text"
-              animate={{ 
+              animate={{
                 backgroundPosition: ['0% 50%', '100% 50%', '0% 50%']
               }}
               transition={{ duration: 5, repeat: Infinity }}
@@ -366,7 +318,7 @@ const Landing = () => {
                   initial={{ opacity: 0, scale: 0 }}
                   animate={{ opacity: 1, scale: 1 }}
                   transition={{ delay: 1.7 + i * 0.1, type: 'spring' }}
-                  whileHover={{ 
+                  whileHover={{
                     scale: 1.1,
                     boxShadow: '0 0 20px rgba(82,196,26,0.5)'
                   }}

@@ -18,15 +18,24 @@ class UnifiedWorkoutSystem:
     3. Provides real-time feedback
     """
     
-    def __init__(self, model_path="models/video_exercise_model.pkl"):
-        print("🚀 Initializing Unified Workout System...")
+    def __init__(self, model_path=None):
+        print("Initializing Unified Workout System...")
         
-        # Initialize exercise classifier
-        self.classifier = VideoExerciseClassifier()
-        if not self.classifier.load_model(model_path):
-            print("⚠️  Model not found. Please train the model first.")
+        # Initialize exercise classifier with auto-loading
+        self.classifier = VideoExerciseClassifier(auto_load_model=True)
+        
+        # If auto-loading failed and specific path provided, try that
+        if not self.classifier.model_loaded and model_path:
+            if not self.classifier.load_model(model_path):
+                print("Model not found. Please train the model first.")
+                print("   Run: python backend/scripts/train_video_model.py")
+                raise FileNotFoundError(f"Model not found at {model_path}")
+        
+        # Check if model is loaded
+        if not self.classifier.model_loaded:
+            print("No trained model available. Please train the model first.")
             print("   Run: python backend/scripts/train_video_model.py")
-            raise FileNotFoundError(f"Model not found at {model_path}")
+            raise FileNotFoundError("No trained model found")
         
         # Initialize MediaPipe
         self.mp_pose = mp.solutions.pose
@@ -56,8 +65,8 @@ class UnifiedWorkoutSystem:
         self.stable_frames = 0
         self.required_stable_frames = 5  # Need 5 consistent frames to change exercise
         
-        print("✅ Unified Workout System Ready!")
-        print(f"📋 Supported Exercises: {list(self.counters.keys())}")
+        print("Unified Workout System Ready!")
+        print(f"Supported Exercises: {list(self.counters.keys())}")
     
     def process_frame(self, frame):
         """
@@ -133,7 +142,7 @@ class UnifiedWorkoutSystem:
     
     def _switch_exercise(self, new_exercise):
         """Switch to a new exercise and reset counter"""
-        print(f"🔄 Switching exercise: {self.current_exercise} → {new_exercise}")
+        print(f"Switching exercise: {self.current_exercise} -> {new_exercise}")
         
         self.current_exercise = new_exercise
         self.current_counter = self.counters.get(new_exercise)
@@ -219,13 +228,13 @@ class UnifiedWorkoutSystem:
     
     def run_webcam(self):
         """Run the system with webcam input"""
-        print("\n🎥 Starting webcam workout session...")
+        print("\nStarting webcam workout session...")
         print("Press 'q' to quit")
         
         cap = cv2.VideoCapture(0)
         
         if not cap.isOpened():
-            print("❌ Error: Could not open webcam")
+            print("Error: Could not open webcam")
             return
         
         # Set camera properties
@@ -238,7 +247,7 @@ class UnifiedWorkoutSystem:
             while cap.isOpened():
                 ret, frame = cap.read()
                 if not ret:
-                    print("❌ Failed to grab frame")
+                    print("Failed to grab frame")
                     break
                 
                 # Process every frame
@@ -263,7 +272,7 @@ class UnifiedWorkoutSystem:
     def _print_session_summary(self):
         """Print workout session summary"""
         print("\n" + "="*50)
-        print("📊 WORKOUT SESSION SUMMARY")
+        print("WORKOUT SESSION SUMMARY")
         print("="*50)
         
         if self.current_counter:

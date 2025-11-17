@@ -51,13 +51,14 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
-# Initialize MediaPipe
+# Initialize MediaPipe (optimized for speed)
 mp_pose = mp.solutions.pose
 pose = mp_pose.Pose(
     static_image_mode=False,
-    model_complexity=1,
-    min_detection_confidence=0.6,
-    min_tracking_confidence=0.6
+    model_complexity=0,  # Reduced for faster processing
+    enable_segmentation=False,
+    min_detection_confidence=0.5,  # Slightly lower for faster detection
+    min_tracking_confidence=0.5
 )
 
 # Initialize classifier and counters
@@ -74,11 +75,10 @@ counters = {
 user_sessions = {}
 current_exercise = None
 current_counter = None
-exercise_locked = False
-exercise_lock_min_reps = 10
+# Optimized classification settings for faster response
 classification_buffer = []
-classification_buffer_size = 5
-min_classification_confidence = 0.7
+classification_buffer_size = 2  # Reduced from 3 for faster response
+min_classification_confidence = 0.4  # Slightly lower for faster detection
 
 @app.on_event("startup")
 async def startup_event():
@@ -170,7 +170,7 @@ async def analyze_frame(data: WorkoutFrame):
         nparr = np.frombuffer(image_data, np.uint8)
         frame = cv2.imdecode(nparr, cv2.IMREAD_COLOR)
         
-        # Get pose landmarks
+        # Get pose landmarks (single processing for both classification and counting)
         rgb_frame = cv2.cvtColor(frame, cv2.COLOR_BGR2RGB)
         results = pose.process(rgb_frame)
         
@@ -186,8 +186,8 @@ async def analyze_frame(data: WorkoutFrame):
                 "angles": {}
             }
         
-        # Extract landmarks for classification
-        landmarks = classifier.extract_landmarks_from_frame(frame)
+        # Extract landmarks for classification (reuse existing pose results)
+        landmarks = classifier.extract_landmarks_from_results(results)
         
         if landmarks is None:
             return {
@@ -221,36 +221,23 @@ async def analyze_frame(data: WorkoutFrame):
             most_common_exercise = detected_exercise
             vote_confidence = 1.0
         
-        # Exercise locking logic
+        # Simplified exercise detection logic
         if current_exercise is None:
-            # First detection - set exercise if confidence is high enough
-            if exercise_confidence >= min_classification_confidence and vote_confidence >= 0.6:
+            # First detection - set exercise if confidence is reasonable
+            if exercise_confidence >= min_classification_confidence and vote_confidence >= 0.5:
                 current_exercise = most_common_exercise
                 current_counter = counters.get(current_exercise)
                 if current_counter:
                     current_counter.reset()
-                exercise_locked = True
-                print(f"[INFO] Exercise locked: {current_exercise} (confidence: {exercise_confidence:.2f})")
-        elif not exercise_locked:
-            # Not locked yet, can still change
-            if most_common_exercise != current_exercise and exercise_confidence >= min_classification_confidence:
-                current_exercise = most_common_exercise
-                current_counter = counters.get(current_exercise)
-                if current_counter:
-                    current_counter.reset()
-        else:
-            # Locked - check if we can unlock
-            if current_counter and current_counter.get_count() >= exercise_lock_min_reps:
-                # Unlock after minimum reps completed
-                exercise_locked = False
-                # Allow exercise change if new exercise is detected consistently
-                if most_common_exercise != current_exercise and vote_confidence >= 0.8:
-                    current_exercise = most_common_exercise
-                    current_counter = counters.get(current_exercise)
-                    if current_counter:
-                        current_counter.reset()
-                    exercise_locked = True
-                    classification_buffer.clear()
+                print(f"[INFO] Exercise detected: {current_exercise} (confidence: {exercise_confidence:.2f})")
+        elif most_common_exercise != current_exercise and exercise_confidence >= min_classification_confidence and vote_confidence >= 0.7:
+            # Allow exercise change if new exercise is detected consistently with high confidence
+            print(f"[INFO] Exercise changed from {current_exercise} to {most_common_exercise}")
+            current_exercise = most_common_exercise
+            current_counter = counters.get(current_exercise)
+            if current_counter:
+                current_counter.reset()
+            classification_buffer.clear()
         
         # Count reps
         if current_counter and current_exercise:
@@ -258,19 +245,24 @@ async def analyze_frame(data: WorkoutFrame):
             print(f"[DEBUG] Exercise: {current_exercise}, Counter result: {result}")
             
             # Parse result based on counter type
-            if isinstance(result, tuple):
+            if isinstance(result, tuple) and len(result) >= 2:
                 if len(result) == 6:  # PushupCounter
                     reps, stage, elbow_angle, feedback, back_angle, form_quality = result
-                    angles = {"elbow": elbow_angle, "back": back_angle}
-                elif len(result) == 3:  # Standard counters
+                    angles = {"elbow": elbow_angle or 0, "back": back_angle or 0}
+                elif len(result) == 3:  # Standard counters (Curl, Squat, etc.)
                     reps, stage, angle = result
-                    feedback = f"{stage.upper()}" if stage else "READY"
+                    feedback = f"{stage.upper()} - {reps} REPS" if stage else "READY"
                     form_quality = "GOOD"
                     angles = {"primary": angle if angle else 0}
+                elif len(result) == 2:  # Basic counter
+                    reps, stage = result
+                    feedback = f"{stage.upper()} - {reps} REPS" if stage else "READY"
+                    form_quality = "GOOD"
+                    angles = {}
                 else:
-                    reps, stage = 0, "ready"
-                    feedback = "Processing..."
-                    form_quality = "UNKNOWN"
+                    reps, stage = result[0] if len(result) > 0 else 0, result[1] if len(result) > 1 else "ready"
+                    feedback = f"{stage.upper()} - {reps} REPS" if stage else "READY"
+                    form_quality = "GOOD"
                     angles = {}
             else:
                 reps, stage = 0, "ready"
@@ -400,11 +392,10 @@ async def get_supported_exercises():
 @app.post("/api/workout/reset")
 async def reset_workout():
     """Reset workout session"""
-    global current_exercise, current_counter, exercise_locked, classification_buffer
+    global current_exercise, current_counter, classification_buffer
     
     current_exercise = None
     current_counter = None
-    exercise_locked = False
     classification_buffer.clear()
     
     print("[INFO] Workout session reset")
@@ -417,7 +408,7 @@ async def reset_workout():
 if __name__ == "__main__":
     import uvicorn
     
-    print("\n🚀 Starting AlphaReps API Server...\n")
+    print("\nStarting AlphaReps API Server...\n")
     uvicorn.run(
         app,
         host="0.0.0.0",

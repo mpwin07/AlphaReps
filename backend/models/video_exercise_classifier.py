@@ -13,20 +13,7 @@ from typing import List, Tuple, Optional
 import asyncio
 
 class VideoExerciseClassifier:
-    """
-    Exercise classifier that processes video files to extract pose landmarks
-    and trains an ensemble model to classify between different exercise types.
-    
-    Uses a 3-model ensemble approach:
-    - Random Forest (300 estimators) - Handles non-linear relationships
-    - Gradient Boosting (200 estimators) - Sequential error correction
-    - Support Vector Machine (RBF kernel) - Complex decision boundaries
-    
-    The ensemble uses soft voting (probability-based) for final predictions,
-    combining the strengths of all three models for improved accuracy and robustness.
-    """
-    
-    def __init__(self):
+    def __init__(self, auto_load_model=True):
         # Initialize three models for ensemble
         # Model 1: Random Forest
         self.rf_model = RandomForestClassifier(
@@ -88,6 +75,32 @@ class VideoExerciseClassifier:
             'squat'
         ]
         
+        # Auto-load trained model if available
+        self.model_loaded = False
+        if auto_load_model:
+            self._try_load_trained_model()
+    
+    def _try_load_trained_model(self):
+        """Try to load a trained model from common locations"""
+        model_paths = [
+            "models/video_exercise_model.pkl",          # Primary location
+            os.path.join(os.path.dirname(__file__), "video_exercise_model.pkl"),  # Same directory
+            "backend/models/video_exercise_model.pkl",  # Full backend path
+            "scripts/models/video_exercise_model.pkl",  # Legacy training script location
+            "../scripts/models/video_exercise_model.pkl" # Legacy relative path
+        ]
+        
+        for model_path in model_paths:
+            if os.path.exists(model_path):
+                print(f"Found trained model at: {model_path}")
+                if self.load_model(model_path):
+                    self.model_loaded = True
+                    print("Trained model loaded successfully!")
+                    return True
+                    
+        print("No trained model found. Use train_model() to train a new model.")
+        return False
+        
     def extract_landmarks_from_frame(self, frame: np.ndarray) -> Optional[np.ndarray]:
         """Extract pose landmarks from a single frame with enhanced curl detection"""
         try:
@@ -97,6 +110,15 @@ class VideoExerciseClassifier:
             # Process the frame
             results = self.pose.process(rgb_frame)
             
+            return self.extract_landmarks_from_results(results)
+                
+        except Exception as e:
+            print(f"Error extracting landmarks: {e}")
+            return None
+    
+    def extract_landmarks_from_results(self, results) -> Optional[np.ndarray]:
+        """Extract landmarks from existing MediaPipe results (optimized for reuse)"""
+        try:
             if results.pose_landmarks:
                 # Extract basic landmark coordinates
                 landmarks = []
@@ -108,8 +130,8 @@ class VideoExerciseClassifier:
                         landmark.visibility
                     ])
                 
-                # Add enhanced features for curl differentiation
-                enhanced_features = self.extract_curl_specific_features(results.pose_landmarks)
+                # Add enhanced features for curl differentiation (simplified for speed)
+                enhanced_features = self.extract_curl_specific_features_fast(results.pose_landmarks)
                 landmarks.extend(enhanced_features)
                 
                 # Ensure exactly 146 features (132 basic + 14 enhanced)
@@ -122,7 +144,7 @@ class VideoExerciseClassifier:
                 return None
                 
         except Exception as e:
-            print(f"Error extracting landmarks: {e}")
+            print(f"Error extracting landmarks from results: {e}")
             return None
     
     def extract_curl_specific_features(self, pose_landmarks) -> List[float]:
@@ -213,6 +235,75 @@ class VideoExerciseClassifier:
             print(f"Warning: Using default curl features due to error: {e}")
             # Return reasonable default values instead of zeros
             return [90.0, 90.0, 0.2, 0.2, 0.05, 0.05, 0.0, 0.0, 0.03, 0.03, 0.04, 0.04, 0.0, 0.0]
+    
+    def extract_curl_specific_features_fast(self, pose_landmarks) -> List[float]:
+        """Fast version of curl feature extraction with minimal computation"""
+        try:
+            landmarks = pose_landmarks.landmark
+            
+            # Only extract essential features for speed
+            features = []
+            
+            # Basic elbow angles (most important for curl detection)
+            if len(landmarks) > 16:
+                left_shoulder = landmarks[11]
+                left_elbow = landmarks[13]
+                left_wrist = landmarks[15]
+                right_shoulder = landmarks[12]
+                right_elbow = landmarks[14]
+                right_wrist = landmarks[16]
+                
+                # Simple 2D angle calculation (faster than 3D)
+                left_angle = self.calculate_angle_2d_fast(
+                    (left_shoulder.x, left_shoulder.y),
+                    (left_elbow.x, left_elbow.y),
+                    (left_wrist.x, left_wrist.y)
+                )
+                right_angle = self.calculate_angle_2d_fast(
+                    (right_shoulder.x, right_shoulder.y),
+                    (right_elbow.x, right_elbow.y),
+                    (right_wrist.x, right_wrist.y)
+                )
+                features.extend([left_angle, right_angle])
+                
+                # Basic wrist positions (simplified)
+                features.extend([
+                    left_wrist.x - left_elbow.x,
+                    right_wrist.x - right_elbow.x,
+                    left_wrist.y - left_elbow.y,
+                    right_wrist.y - right_elbow.y
+                ])
+                
+                # Fill remaining with simple defaults
+                features.extend([0.0] * 8)
+            else:
+                # Fallback if not enough landmarks
+                features = [90.0, 90.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0]
+            
+            return features[:14]
+            
+        except Exception as e:
+            # Fast fallback
+            return [90.0, 90.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0]
+    
+    def calculate_angle_2d_fast(self, point1, point2, point3):
+        """Fast 2D angle calculation"""
+        try:
+            import math
+            a = np.array(point1)
+            b = np.array(point2)
+            c = np.array(point3)
+            
+            ba = a - b
+            bc = c - b
+            
+            cosine_angle = np.dot(ba, bc) / (np.linalg.norm(ba) * np.linalg.norm(bc))
+            cosine_angle = np.clip(cosine_angle, -1.0, 1.0)
+            angle = np.arccos(cosine_angle)
+            
+            return np.degrees(angle)
+        except:
+            return 90.0
     
     def calculate_angle_3d(self, point1, point2, point3):
         """Calculate angle between three 3D points with NaN protection"""
@@ -473,7 +564,9 @@ class VideoExerciseClassifier:
     def load_model(self, model_path: str = "models/video_exercise_model.pkl"):
         """Load a pre-trained model"""
         try:
-            model_data = pickle.load(open(model_path, 'rb'))
+            with open(model_path, 'rb') as f:
+                model_data = pickle.load(f)
+            
             self.model = model_data['model']
             # Load individual models if available (for ensemble)
             self.rf_model = model_data.get('rf_model', None)
@@ -485,10 +578,14 @@ class VideoExerciseClassifier:
             self.variance_selector = model_data.get('variance_selector', None)
             self.exercise_classes = model_data['exercise_classes']
             
-            print(f" Model loaded from {model_path}")
+            # Set model loaded flag
+            self.model_loaded = True
+            
+            print(f"Model loaded from {model_path}")
             return True
         except Exception as e:
-            print(f" Error loading model: {e}")
+            print(f"Error loading model: {e}")
+            self.model_loaded = False
             return False
     
     def predict(self, landmarks: np.ndarray) -> str:
@@ -502,6 +599,11 @@ class VideoExerciseClassifier:
             Predicted exercise name
         """
         try:
+            # Check if model is loaded
+            if not self.model_loaded:
+                print("Model not loaded. Cannot make predictions.")
+                return "unknown"
+            
             # Reshape if needed
             if landmarks.ndim == 1:
                 landmarks = landmarks.reshape(1, -1)

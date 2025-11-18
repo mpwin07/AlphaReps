@@ -38,7 +38,7 @@ const WorkoutSession = () => {
   }, [isActive])
 
   const startWorkout = () => {
-    // Send video frames to backend every 200ms (reduced from 100ms for better performance)
+    // Send video frames to backend every 150ms for better responsiveness
     intervalRef.current = setInterval(async () => {
       // Skip if previous request is still processing
       if (isProcessingRef.current) return
@@ -49,7 +49,7 @@ const WorkoutSession = () => {
           await sendFrame(imageSrc)
         }
       }
-    }, 200)
+    }, 150)
   }
 
   const stopWorkout = () => {
@@ -68,7 +68,7 @@ const WorkoutSession = () => {
       const response = await axios.post('/api/workout/analyze', {
         frame: imageData
       }, {
-        timeout: 5000 // 5 second timeout
+        timeout: 3000 // 3 second timeout for faster response
       })
 
       const data = response.data

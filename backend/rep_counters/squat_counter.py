@@ -9,10 +9,10 @@ class SquatCounter(BaseRepCounter):
     def __init__(self):
         super().__init__()
         self.angle_history = []
-        self.history_size = 5  # Balanced smoothing
+        self.history_size = 3  # Reduced for faster response
         self.min_down_angle = 90  # More lenient - must go below 90 degrees
         self.min_up_angle = 160   # More lenient - must go above 160 degrees
-        self.debounce_frames = 2  # Reduced for faster response
+        self.debounce_frames = 1  # Minimal debouncing for immediate response
         self.frames_in_position = 0
         
     def count_rep(self, landmarks):

@@ -77,8 +77,10 @@ current_exercise = None
 current_counter = None
 # Optimized classification settings for faster response
 classification_buffer = []
-classification_buffer_size = 2  # Reduced from 3 for faster response
-min_classification_confidence = 0.4  # Slightly lower for faster detection
+classification_buffer_size = 1  # Further reduced for immediate response
+min_classification_confidence = 0.35  # Lower for faster detection
+frame_skip_counter = 0
+process_every_nth_frame = 2  # Process every 2nd frame for better performance
 
 @app.on_event("startup")
 async def startup_event():
@@ -206,32 +208,26 @@ async def analyze_frame(data: WorkoutFrame):
         probabilities = classifier.predict_proba(landmarks)
         exercise_confidence = max(probabilities.values()) if probabilities else 0
         
-        # Add to classification buffer for stability
+        # Simplified classification for faster response
         classification_buffer.append(detected_exercise)
         if len(classification_buffer) > classification_buffer_size:
             classification_buffer.pop(0)
         
-        # Get most common exercise from buffer (voting)
-        from collections import Counter
-        if len(classification_buffer) >= 3:
-            vote_counts = Counter(classification_buffer)
-            most_common_exercise = vote_counts.most_common(1)[0][0]
-            vote_confidence = vote_counts.most_common(1)[0][1] / len(classification_buffer)
-        else:
-            most_common_exercise = detected_exercise
-            vote_confidence = 1.0
+        # Use immediate detection with minimal buffering
+        most_common_exercise = detected_exercise
+        vote_confidence = exercise_confidence
         
-        # Simplified exercise detection logic
+        # Faster exercise detection logic
         if current_exercise is None:
-            # First detection - set exercise if confidence is reasonable
-            if exercise_confidence >= min_classification_confidence and vote_confidence >= 0.5:
+            # First detection - set exercise immediately if confidence is reasonable
+            if exercise_confidence >= min_classification_confidence:
                 current_exercise = most_common_exercise
                 current_counter = counters.get(current_exercise)
                 if current_counter:
                     current_counter.reset()
                 print(f"[INFO] Exercise detected: {current_exercise} (confidence: {exercise_confidence:.2f})")
-        elif most_common_exercise != current_exercise and exercise_confidence >= min_classification_confidence and vote_confidence >= 0.7:
-            # Allow exercise change if new exercise is detected consistently with high confidence
+        elif most_common_exercise != current_exercise and exercise_confidence >= min_classification_confidence + 0.1:
+            # Allow faster exercise change with slightly higher confidence
             print(f"[INFO] Exercise changed from {current_exercise} to {most_common_exercise}")
             current_exercise = most_common_exercise
             current_counter = counters.get(current_exercise)

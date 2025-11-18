@@ -9,10 +9,10 @@ class ShoulderPressCounter(BaseRepCounter):
     def __init__(self):
         super().__init__()
         self.angle_history = []
-        self.history_size = 5
+        self.history_size = 3  # Reduced for faster response
         self.min_down_angle = 90   # Must go below 90 degrees (more lenient)
         self.min_up_angle = 140    # Must extend above 140 degrees (more lenient)
-        self.debounce_frames = 2   # Reduced for faster response
+        self.debounce_frames = 1   # Minimal for immediate response
         self.frames_in_position = 0
         
     def count_rep(self, landmarks):

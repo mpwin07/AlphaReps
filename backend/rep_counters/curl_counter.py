@@ -9,10 +9,10 @@ class CurlCounter(BaseRepCounter):
     def __init__(self):
         super().__init__()
         self.angle_history = []
-        self.history_size = 5
+        self.history_size = 3  # Reduced for faster response
         self.min_curl_angle = 60   # Must curl below 60 degrees
         self.min_extend_angle = 150  # Must extend above 150 degrees
-        self.debounce_frames = 3
+        self.debounce_frames = 1  # Reduced for immediate response
         self.frames_in_position = 0
         
     def count_rep(self, landmarks):
